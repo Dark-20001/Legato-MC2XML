@@ -17,11 +17,15 @@ namespace MC_XML
         public static Regex regFacility = new Regex("Facility=(?<value>.*$)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         public static Regex regSymbolicName = new Regex("SymbolicName=(?<value>.*$)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         public static Regex regLanguage = new Regex("Language=(?<value>.*$)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        public static Regex regComments = new Regex("^;(?:\\s+)?//.*$", RegexOptions.Compiled);
+
+        public const int preservedHeaderCount = 42;
 
         public static void Main(string[] args)
         {
 #if DEBUG
-            //args = new string[1] { @"G:\EMC\Geodrive 1.2.0_AS_Update1\Pre\Convert\resource.1.2.0.19\OCTO_MSG_update.MC" };
+            args = new string[1] { @"G:\EMC\DEV\MC_XML\TestData\OCTO_MSG.MC.xml" };
+            /*
             args = new string[9];
             args[0] = @"G:\EMC\Geodrive 1.2.0_AS_Update1\Pre\Convert\resource.1.2.0.19\OCTO_MSG_update.MCchs.xml";
             args[1] = @"G:\EMC\Geodrive 1.2.0_AS_Update1\Pre\Convert\resource.1.2.0.19\OCTO_MSG_update.MCdeu.xml";
@@ -32,7 +36,7 @@ namespace MC_XML
             args[6] = @"G:\EMC\Geodrive 1.2.0_AS_Update1\Pre\Convert\resource.1.2.0.19\OCTO_MSG_update.MCkor.xml";
             args[7] = @"G:\EMC\Geodrive 1.2.0_AS_Update1\Pre\Convert\resource.1.2.0.19\OCTO_MSG_update.MCptb.xml";
             args[8] = @"G:\EMC\Geodrive 1.2.0_AS_Update1\Pre\Convert\resource.1.2.0.19\OCTO_MSG_update.MCrus.xml";
-
+            */
 #endif
             for (int i = 0; i < args.Length; i++)
             {
@@ -65,7 +69,7 @@ namespace MC_XML
             else if (Path.GetExtension(file).ToUpper() == ".XML") 
             {
                 Console.WriteLine("Running XML to MC");
-                return XML2MC(file, LanguageNames.Portuguese);
+                return XML2MC(file, LanguageNames.English);
             }
             else
             {
@@ -88,110 +92,127 @@ namespace MC_XML
             Match mSymbolicName = null;
             Match mLanguage = null;
 
+            int linecounter = 0;
+
             while (sr.Peek() >= 0)
             {
+                linecounter++;
                 line = sr.ReadLine();
-                if (regMessageId.IsMatch(line) && isStart == false)
-                {
-                    Console.Write(".");
 
-                    isStart = true;
-                    item i = new item();
-
-                    mMessageId=regMessageId.Match(line);
-                    i.MessageId=mMessageId.Groups["value"].Value;
-                    line = sr.ReadLine();
-
-                    mSeverity = regSeverity.Match(line);
-                    i.Severity = mSeverity.Groups["value"].Value;
-                    line = sr.ReadLine();
-
-                    if (regFacility.IsMatch(line))
-                    {                       
-
-                        mFacility = regFacility.Match(line);
-                        i.Facility = mFacility.Groups["value"].Value;
-                        line = sr.ReadLine();
-
-                        mSymbolicName = regSymbolicName.Match(line);
-                        i.SymbolicName = mSymbolicName.Groups["value"].Value;
-                        line = sr.ReadLine();
-
-                        while (line == "")
-                        {
-                            line = sr.ReadLine();
-                        }
-
-                        mLanguage = regLanguage.Match(line);
-                        i.Language = (LanguageNames) Enum.Parse(typeof(LanguageNames), mLanguage.Groups["value"].Value);
-                        isFirstLine = true;
-
-                        line = sr.ReadLine();
-                        while (line != ".")
-                        {
-                            if (isFirstLine)
-                            {
-                                text = line;
-                                isFirstLine = false;
-                            }
-                            else
-                            {
-                                text = text + "\r\n" + line;
-                            }
-                            line = sr.ReadLine();                            
-                        }
-                        isFirstLine = false;
-                        isStart = false;
-                        i.Text = text;
-                        
-                        items.Add(i);
-                        text = string.Empty;
-                    }
-                    else if (regSymbolicName.IsMatch(line))
+                if (linecounter > preservedHeaderCount)
+                {                    
+                    if (regMessageId.IsMatch(line) && isStart == false)
                     {
-                        mSymbolicName = regSymbolicName.Match(line);
-                        i.SymbolicName = mSymbolicName.Groups["value"].Value;
+                        Console.Write(".");
+
+                        isStart = true;
+                        item i = new item();
+                        i.isComments = false;
+
+                        mMessageId = regMessageId.Match(line);
+                        i.MessageId = mMessageId.Groups["value"].Value;
                         line = sr.ReadLine();
 
-                        while (line == "")
+                        mSeverity = regSeverity.Match(line);
+                        i.Severity = mSeverity.Groups["value"].Value;
+                        line = sr.ReadLine();
+
+                        if (regFacility.IsMatch(line))
                         {
+
+                            mFacility = regFacility.Match(line);
+                            i.Facility = mFacility.Groups["value"].Value;
                             line = sr.ReadLine();
+
+                            mSymbolicName = regSymbolicName.Match(line);
+                            i.SymbolicName = mSymbolicName.Groups["value"].Value;
+                            line = sr.ReadLine();
+
+                            while (line == "")
+                            {
+                                line = sr.ReadLine();
+                            }
+
+                            mLanguage = regLanguage.Match(line);
+                            i.Language = (LanguageNames)Enum.Parse(typeof(LanguageNames), mLanguage.Groups["value"].Value);
+                            isFirstLine = true;
+
+                            line = sr.ReadLine();
+                            while (line != ".")
+                            {
+                                if (isFirstLine)
+                                {
+                                    text = line;
+                                    isFirstLine = false;
+                                }
+                                else
+                                {
+                                    text = text + "\r\n" + line;
+                                }
+                                line = sr.ReadLine();
+                            }
+                            isFirstLine = false;
+                            isStart = false;
+                            i.Text = text;
+
+                            items.Add(i);
+                            text = string.Empty;
                         }
-
-                        mLanguage = regLanguage.Match(line);
-                        i.Language = (LanguageNames)Enum.Parse(typeof(LanguageNames), mLanguage.Groups["value"].Value);
-                        isFirstLine = true;
-
-                        line = sr.ReadLine();
-                        while (line != ".")
+                        else if (regSymbolicName.IsMatch(line))
                         {
-                            if (isFirstLine)
-                            {
-                                text = line;
-                                isFirstLine = false;
-                            }
-                            else
-                            {
-                                text = text + "\r\n" + line;
-                            }
-                            line = sr.ReadLine();    
-                        }
-                        isFirstLine = false;
-                        isStart = false;
-                        i.Text = text;
+                            mSymbolicName = regSymbolicName.Match(line);
+                            i.SymbolicName = mSymbolicName.Groups["value"].Value;
+                            line = sr.ReadLine();
 
-                        items.Add(i);
-                        text = string.Empty;
+                            while (line == "")
+                            {
+                                line = sr.ReadLine();
+                            }
+
+                            mLanguage = regLanguage.Match(line);
+                            i.Language = (LanguageNames)Enum.Parse(typeof(LanguageNames), mLanguage.Groups["value"].Value);
+                            isFirstLine = true;
+
+                            line = sr.ReadLine();
+                            while (line != ".")
+                            {
+                                if (isFirstLine)
+                                {
+                                    text = line;
+                                    isFirstLine = false;
+                                }
+                                else
+                                {
+                                    text = text + "\r\n" + line;
+                                }
+                                line = sr.ReadLine();
+                            }
+                            isFirstLine = false;
+                            isStart = false;
+                            i.Text = text;
+
+                            items.Add(i);
+                            text = string.Empty;
+                        }
+                        else
+                        {
+                            //should not be here
+                            isStart = false;
+                            isFirstLine = false;
+                            Console.WriteLine("Error! Missing SymbolicName!");
+                            return false;
+                        }
                     }
-                    else
+                    else if (regComments.IsMatch(line))
                     {
-                        //should not be here
-                        isStart = false;
-                        isFirstLine = false;
-                        Console.WriteLine("Error! Missing SymbolicName!");
-                        return false;
+                        item i = new item();
+                        i.isComments = true;
+                        i.Text = line;
+                        items.Add(i);
                     }
                 }
+
+
             }
 
             sr.Close();
@@ -205,45 +226,66 @@ namespace MC_XML
 
             for (int i = 0; i < items.Count; i++)
             {
-
-                XmlElement elem_item = doc.CreateElement("item");
-
-                XmlElement elem_MessageId = doc.CreateElement("MessageId");
-                elem_MessageId.InnerText = items[i].MessageId;
-
-                XmlElement elem_Severity = doc.CreateElement("Severity");
-                elem_Severity.InnerText = items[i].Severity;
-
-                if (items[i].Facility != null)
+                if (items[i].isComments)
                 {
-                    XmlElement elem_Facility = doc.CreateElement("Facility");
-                    elem_Facility.InnerText = items[i].Facility;
-                    elem_item.AppendChild(elem_Facility);
+                    XmlElement elem_item = doc.CreateElement("item");
+
+                    XmlAttribute AttComments = doc.CreateAttribute("isComments");
+                    AttComments.Value = "yes";
+                    elem_item.Attributes.Append(AttComments);
+
+                    XmlElement elem_Text = doc.CreateElement("Comment");
+                    XmlCDataSection cdata = doc.CreateCDataSection(items[i].Text);
+                    elem_Text.AppendChild(cdata);
+
+                    elem_item.AppendChild(elem_Text);
+                    root.AppendChild(elem_item);
                 }
+                else
+                {
+                    XmlElement elem_item = doc.CreateElement("item");
 
-                //XmlElement elem_SymbolicName = doc.CreateElement("SymbolicName");
-                //elem_SymbolicName.InnerText = items[i].SymbolicName;
-                XmlElement elem_Language = doc.CreateElement("Language");
-                elem_Language.InnerText = Enum.GetName(typeof(LanguageNames), items[i].Language);
-                XmlElement elem_Text = doc.CreateElement("Text");
-                XmlCDataSection cdata = doc.CreateCDataSection(items[i].Text);
-                elem_Text.AppendChild(cdata);
+                    XmlAttribute AttComments = doc.CreateAttribute("isComments");
+                    AttComments.Value = "no";
+                    elem_item.Attributes.Append(AttComments);
 
-                XmlAttribute attSymbolicName = doc.CreateAttribute("SymbolicName");
-                attSymbolicName.Value = items[i].SymbolicName;
-                elem_Text.Attributes.Append(attSymbolicName);
+                    XmlElement elem_MessageId = doc.CreateElement("MessageId");
+                    elem_MessageId.InnerText = items[i].MessageId;
+
+                    XmlElement elem_Severity = doc.CreateElement("Severity");
+                    elem_Severity.InnerText = items[i].Severity;
+
+                    if (items[i].Facility != null)
+                    {
+                        XmlElement elem_Facility = doc.CreateElement("Facility");
+                        elem_Facility.InnerText = items[i].Facility;
+                        elem_item.AppendChild(elem_Facility);
+                    }
+
+                    //XmlElement elem_SymbolicName = doc.CreateElement("SymbolicName");
+                    //elem_SymbolicName.InnerText = items[i].SymbolicName;
+                    XmlElement elem_Language = doc.CreateElement("Language");
+                    elem_Language.InnerText = Enum.GetName(typeof(LanguageNames), items[i].Language);
+                    XmlElement elem_Text = doc.CreateElement("Text");
+                    XmlCDataSection cdata = doc.CreateCDataSection(items[i].Text);
+                    elem_Text.AppendChild(cdata);
+
+                    XmlAttribute attSymbolicName = doc.CreateAttribute("SymbolicName");
+                    attSymbolicName.Value = items[i].SymbolicName;
+                    elem_Text.Attributes.Append(attSymbolicName);
 
 
-                elem_item.AppendChild(elem_MessageId);
+                    elem_item.AppendChild(elem_MessageId);
 
 
-                elem_item.AppendChild(elem_Severity);
-                
-                //elem_item.AppendChild(elem_SymbolicName);
-                elem_item.AppendChild(elem_Language);
-                elem_item.AppendChild(elem_Text);
+                    elem_item.AppendChild(elem_Severity);
 
-                root.AppendChild(elem_item);
+                    //elem_item.AppendChild(elem_SymbolicName);
+                    elem_item.AppendChild(elem_Language);
+                    elem_item.AppendChild(elem_Text);
+
+                    root.AppendChild(elem_item);
+                }
             }
             doc.AppendChild(root);
             doc.Save(sw);
@@ -273,31 +315,39 @@ namespace MC_XML
 
             foreach(XmlNode itemNode in itemsNode)
             {
-                ndMessageId = itemNode.SelectSingleNode("MessageId");
-
-                sw.WriteLine(string.Format("MessageId={0}", ndMessageId.InnerText));
-
-
-                ndSeverity = itemNode.SelectSingleNode("Severity");
-                sw.WriteLine(string.Format("Severity={0}", ndSeverity.InnerText));
-
-                ndFacility = itemNode.SelectSingleNode("Facility");
-                if (ndFacility != null)
+                if (itemNode.Attributes["isComments"].Value == "no")
                 {
-                    sw.WriteLine(string.Format("Facility={0}", ndFacility.InnerText));
+                    ndMessageId = itemNode.SelectSingleNode("MessageId");
+
+                    sw.WriteLine(string.Format("MessageId={0}", ndMessageId.InnerText));
+
+
+                    ndSeverity = itemNode.SelectSingleNode("Severity");
+                    sw.WriteLine(string.Format("Severity={0}", ndSeverity.InnerText));
+
+                    ndFacility = itemNode.SelectSingleNode("Facility");
+                    if (ndFacility != null)
+                    {
+                        sw.WriteLine(string.Format("Facility={0}", ndFacility.InnerText));
+                    }
+
+                    ndText = itemNode.SelectSingleNode("Text");
+                    //ndSymbolicName = itemNode.SelectSingleNode("SymbolicName");
+                    //sw.WriteLine(string.Format("SymbolicName={0}", ndSymbolicName.InnerText));
+                    sw.WriteLine(string.Format("SymbolicName={0}", ndText.Attributes["SymbolicName"].Value));
+
+                    sw.WriteLine(string.Format("Language={0}", Enum.GetName(typeof(LanguageNames), language)));
+
+                    sw.WriteLine(ndText.InnerText);
+
+                    sw.WriteLine(".");
+                    sw.WriteLine("");
                 }
-
-                ndText = itemNode.SelectSingleNode("Text");
-                //ndSymbolicName = itemNode.SelectSingleNode("SymbolicName");
-                //sw.WriteLine(string.Format("SymbolicName={0}", ndSymbolicName.InnerText));
-                sw.WriteLine(string.Format("SymbolicName={0}", ndText.Attributes["SymbolicName"].Value));
-
-                sw.WriteLine(string.Format("Language={0}", Enum.GetName(typeof(LanguageNames), language)));
-                                
-                sw.WriteLine(ndText.InnerText);
-
-                sw.WriteLine(".");
-                sw.WriteLine("");
+                else
+                {
+                    ndText = itemNode.SelectSingleNode("Comment");
+                    sw.WriteLine(ndText.InnerText);
+                }
             }
 
             sr.Close();
@@ -330,6 +380,7 @@ namespace MC_XML
             public string SymbolicName { get; set; }
             public LanguageNames Language { get; set; }
             public string Text { get; set; }
+            public bool isComments { get; set; }
         }
     }
 }
