@@ -100,7 +100,7 @@ namespace MC_XML
                 line = sr.ReadLine();
 
                 if (linecounter > preservedHeaderCount)
-                {                    
+                {
                     if (regMessageId.IsMatch(line) && isStart == false)
                     {
                         Console.Write(".");
@@ -211,7 +211,13 @@ namespace MC_XML
                         items.Add(i);
                     }
                 }
-
+                else
+                {
+                    item i = new item();
+                    i.isComments = true;
+                    i.Text = line;
+                    items.Add(i);
+                }
 
             }
 
